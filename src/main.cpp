@@ -1,7 +1,7 @@
 #include <FastLED.h>
 #include <vector>
 
-#define NUM_LEDS 300
+#define NUM_LEDS 255
 
 #define DATA_PIN 1
 #define DATA_PIN_2 8
@@ -12,8 +12,8 @@ CRGB leds[NUM_LEDS];
 
 int iterateSpeed = 32; // Delay in ms
 
-int maxBright = 128;
-int minBright = 32;
+int maxBright = 192;
+int minBright = 64;
 
 void setup() 
 { 
@@ -52,7 +52,8 @@ void rainbowStrobe()
 {
 	int spot_brightness = 0;
 
-	for (int j = 0; j < 2048; j++)
+	//BUGBUG Code is gracelessly rolling over, IDK why. Setting this to an absurdly high number postpones rollover.
+	for (int j = 0; j < 4194303; j++)
 	{
 		for (int i = 0; i < NUM_LEDS; i++)
 		{
@@ -60,12 +61,21 @@ void rainbowStrobe()
 			//The brighness will make multiple steps.
 			//There's no reason why the brighness can't change, for example,
 			//four times faster than the colour does, but I'm lazy so here we are
-			spot_brightness = (i+(j))% (maxBright * 2);
+			
+			//We want a wave much faster than the flow of colours, so we multiply the spot brightness by 8
+			//Moduloing by maxBright results in a sawtooth pattern.
+			//Multiplying by two gives us a smoother fade in/out when combined with the code below
+			spot_brightness = ((i+(j))*8) % (maxBright * 2);
+
+			//This fades us down
 			if (spot_brightness > maxBright)
 				spot_brightness = maxBright - (spot_brightness - maxBright);
+			//This clamps at the minimum, not quite as good as a "breathing LED" curve but nice enough.
 			if (spot_brightness < minBright)
 				spot_brightness = minBright;
-			leds[i] = CHSV((i+(j/8))%256, 255, spot_brightness);			
+
+			//Colour, something else, spot briggness
+			leds[i] = CHSV((i+(j/2))%256, 255, spot_brightness);			
 		}
 		FastLED.show();
 		delay(iterateSpeed);
